@@ -1,20 +1,24 @@
 package main
 
 import (
-	"fmt"
+	"daydayup/cron"
+	"daydayup/db"
+	"daydayup/router"
+	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
-	"wxcloudrun-golang/db"
-	"wxcloudrun-golang/service"
 )
 
 func main() {
-	if err := db.Init(); err != nil {
-		panic(fmt.Sprintf("mysql init failed with %+v", err))
+	database := db.Init()
+	defer database.Close()
+
+	cron.InitAutoResetStreak(&database)
+	r := router.Init(database)
+
+	gin.SetMode(gin.DebugMode)
+	err := http.ListenAndServe(":19042", r)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
-
-	http.HandleFunc("/", service.IndexHandler)
-	http.HandleFunc("/api/count", service.CounterHandler)
-
-	log.Fatal(http.ListenAndServe(":80", nil))
 }
